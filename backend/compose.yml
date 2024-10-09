@@ -1,0 +1,43 @@
+version: '2.1'
+
+services:
+  backend:
+    container_name: makimono-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+  makimono-db:
+    image: mysql:8.0.39
+    container_name: makimono-mysql
+    restart: always
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: 'db'
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_ROOT_PASSWORD:
+    volumes:
+      - app-mysql:/var/lib/mysql
+
+  redis:
+    image: redis:5.0.8
+    container_name: makimono-redis
+    ports:
+      - "6379"
+
+  localstack:
+    image: localstack/localstack:3.3
+    container_name: makimono-localstack
+    ports:
+      - "4567:4566"
+    environment:
+      - SERVICES=s3
+    volumes:
+      - app-localstack:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+
+
+volumes:
+  app-mysql:
+  app-localstack:
