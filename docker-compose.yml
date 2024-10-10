@@ -1,0 +1,102 @@
+services:
+  backend:
+    container_name: makimono-app
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+
+  makimono-db:
+    image: mysql:8.0.39
+    container_name: makimono-mysql
+    restart: always
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: 'makimono_db'
+      MYSQL_ROOT_PASSWORD: password
+    volumes:
+      - app-mysql:/var/lib/mysql
+
+  redis:
+    image: redis:7.0.14
+    container_name: makimono-redis
+    ports:
+      - "6379"
+
+  localstack:
+    image: localstack/localstack:3.3
+    container_name: makimono-localstack
+    ports:
+      - "4567:4566"
+    environment:
+      - SERVICES=s3
+    volumes:
+      - app-localstack:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # Kafka and Debezium
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: makimono-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "19092:19092"
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:39092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181/kafka
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+  zookeeper:
+    container_name: makimono-zookeeper
+    image: confluentinc/cp-zookeeper:7.7.1
+    ports:
+      - "22181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_SERVER_ID: 1
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-transaction-log:/var/lib/zookeeper/log
+
+  debezium:
+    image: debezium/connect:2.7.3.Final
+    container_name: "makimono-debezium"
+    ports:
+      - "38083:8083"
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - GROUP_ID=Makimono.Group.Debezium
+      - CONNECT_CLIENT_ID=Makimono.Client
+      - CONFIG_STORAGE_TOPIC=Makimono.SYS.Debezium.Config
+      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - OFFSET_STORAGE_TOPIC=Makimono.SYS.Debezium.Offset
+      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - STATUS_STORAGE_TOPIC=Makimono.SYS.Debezium.Status
+      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
+      - LOG_LEVEL=INFO
+      - CONNECT_LOG4J_LOGGERS=info,stdout
+      - ZOOKEEPER_CLIENT_PORT=2181
+    volumes:
+      - ./docker/debezium:/debezium
+    depends_on:
+      - kafka
+      - makimono-db
+
+volumes:
+  app-mysql:
+  app-localstack:
+  kafka-data:
+  zookeeper-data:
+  zookeeper-transaction-log:
