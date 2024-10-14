@@ -24,3 +24,19 @@ The main developers of this project are part of the ID platform group ( @navis-d
 
 This → 📜
 
+## Local Docker setup
+
+```
+docker compose up -d
+```
+
+### Setup Debezium
+```
+make debezium-create
+```
+
+### Update Debezium configs
+```
+make debezium-update
+```
+
