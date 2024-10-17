@@ -24,3 +24,67 @@ The main developers of this project are part of the ID platform group ( @navis-d
 
 This → 📜
 
+## Local Docker setup
+
+```
+docker compose up -d
+```
+
+### Setup Debezium
+```
+make debezium-create
+```
+
+### Update Debezium configs
+```
+make debezium-update
+```
+
+### Create table and some fields
+Connect to `makimono_db` container
+```bash
+docker exec -it makimono-mysql bash  
+```
+
+Connect to MySQL
+```bash
+mysql -u root -p
+```
+
+Then enter the password `password`
+
+Finally, run the following SQL
+```sql
+CREATE TABLE `outbox_events` (
+  `id` char(26) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL COMMENT 'ULID',
+  `tenant_uid` bigint unsigned NOT NULL,
+  `aggregate_type` enum('Makimono.v1') COLLATE utf8mb4_bin NOT NULL,
+  `payload` longblob NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_outbox_events_tenants` (`tenant_uid`)
+);
+```
+
+To Trigger a automated message push to Kafka, we just need to `INSERT` a record to `outbox_events`. Example SQL:
+```sql
+INSERT outbox_events (id, tenant_uid, aggregate_type, payload) VALUES (1, 1, 'Makimono.v1', '{"data": "Hello world"}');
+```
+
+### Extra: UI view for Kafka topics and messages
+
+Using an open source software [Offset Explorer](https://www.kafkatool.com/features.html)
+
+To connect to existing Kafka cluster, use the following configuration setting
+
+```
+Cluster name: Makimono.Client
+Bootstrap servers: localhost:19092
+Kafka Cluster version: 3.7
+
+Enable Zookeeper access: Checked
+Host: localhost
+Port: 2181
+chroot path: /kafka
+```
+
