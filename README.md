@@ -66,7 +66,7 @@ CREATE TABLE `outbox_events` (
 );
 ```
 
-To Trigger a automated message push to Kafka, we just need to `INSTERT` a record to `outboc_events`. Example SQL:
+To Trigger a automated message push to Kafka, we just need to `INSERT` a record to `outbox_events`. Example SQL:
 ```sql
 INSERT outbox_events (id, tenant_uid, aggregate_type, payload) VALUES (1, 1, 'Makimono.v1', '{"data": "Hello world"}');
 ```
